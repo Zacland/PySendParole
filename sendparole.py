@@ -48,22 +48,22 @@ if __name__ == "__main__":
 
     soup = BeautifulSoup(str_page, 'html.parser')
 
-    y = ''
+    transform = ''
 
     for x in soup.find_all(class_="song-text"):
-        y = x.get_text()
+        transform = x.get_text()
         # y += x.encode('cp850').replace('<br>', '').replace('</br>', '')
 
     # Reformatage du texte (première passe)
-    y = y.replace('\n\n', '\n')
-    y = y.replace('\t', '')
-    y = y.replace('  ', '')
+    transform = transform.replace('\n\n', '\n')
+    transform = transform.replace('\t', '')
+    transform = transform.replace('  ', '')
 
-    y = y.splitlines()
+    transform = transform.splitlines()
 
     sortie = ''
     # Suppression des lignes de pub insérées dans le texte (deuxième passe)
-    for ligne in y:
+    for ligne in transform:
         if ligne[:3] == 'eva':
             pass
         else:
@@ -85,9 +85,19 @@ if __name__ == "__main__":
         mail_server = smtplib.SMTP(config['SMTP']['Host'], 587)
         mail_server.ehlo()
         mail_server.starttls()
+
         mail_server.ehlo()
         mail_server.login(config['SMTP']['Email'], config['SMTP']['Password'])
         mail_server.sendmail(config['Sender']['From'], config['Receiver']['To'], msg.as_string())
         mail_server.quit()
     except smtplib.SMTPAuthenticationError:
-        print('Problème d\'authentification !')
+        print('Problème d\'authentification ! Vérifier User/Password.')
+        quit()
+    except smtplib.SMTPException as e:
+        print(str(e.errno) + ' - ' + e.strerror)
+        quit()
+    except Exception as e:
+        print(str(e.errno) + ' - ' + e.strerror)
+        quit()
+
+    print('Mail envoyé !')
