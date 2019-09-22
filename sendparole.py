@@ -1,6 +1,7 @@
 # !/usr/bin/python
 # -*- coding:Utf-8 -*-
 
+import os
 import configparser
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -11,7 +12,6 @@ import urllib.error
 
 
 def create_config():
-    config = configparser.ConfigParser()
     config['SMTP'] = {
         'Host': 'smtp.gmail.com',
         'Email': 'toto@toto.com',
@@ -28,15 +28,21 @@ def create_config():
 
 
 def read_config():
-    config = configparser.ConfigParser()
     config.read('config.ini')
-    return config
 
 
 # -----
 # MAIN
 # -----
 if __name__ == "__main__":
+
+    config = configparser.ConfigParser()
+
+    if not os.path.exists('./config.ini'):
+        create_config()
+    else:
+        read_config()
+
     page = urllib.request.urlopen('http://www.paroles.net/gold/paroles-capitaine-abandonne')
     str_page = page.read()
 
@@ -48,6 +54,7 @@ if __name__ == "__main__":
         y = x.get_text()
         # y += x.encode('cp850').replace('<br>', '').replace('</br>', '')
 
+    # Reformatage du texte (première passe)
     y = y.replace('\n\n', '\n')
     y = y.replace('\t', '')
     y = y.replace('  ', '')
@@ -55,6 +62,7 @@ if __name__ == "__main__":
     y = y.splitlines()
 
     sortie = ''
+    # Suppression des lignes de pub insérées dans le texte (deuxième passe)
     for ligne in y:
         if ligne[:3] == 'eva':
             pass
@@ -64,17 +72,22 @@ if __name__ == "__main__":
     print(sortie)
 
     msg = MIMEMultipart()
-    msg['From'] = 'MYGMAILADDRESS@gmail.com'
-    msg['To'] = 'USER@DOMAIN.XYZ'
+    msg['From'] = config['SMTP']['Email']
+    msg['To'] = config['Receiver']['To']
     msg['Subject'] = '[PiParoles] Paroles du jour'
     msg['Content-Type'] = "text/html; charset=cp850"
     message = sortie
     msg.attach(MIMEText(message))
 
-    # mail_server = smtplib.SMTP('smtp.gmail.com', 587)
-    # mail_server.ehlo()
-    # mail_server.starttls()
-    # mail_server.ehlo()
-    # mail_server.login('MYGMAILADDRESS@gmail.com', 'MYSUPERSECRETPASSWORD')
-    # mail_server.sendmail('FROM@gmail.com', 'TO@DOMAINE.XYZ', msg.as_string())
-    # mail_server.quit()
+    print(msg)
+
+    try:
+        mail_server = smtplib.SMTP(config['SMTP']['Host'], 587)
+        mail_server.ehlo()
+        mail_server.starttls()
+        mail_server.ehlo()
+        mail_server.login(config['SMTP']['Email'], config['SMTP']['Password'])
+        mail_server.sendmail(config['Sender']['From'], config['Receiver']['To'], msg.as_string())
+        mail_server.quit()
+    except smtplib.SMTPAuthenticationError:
+        print('Problème d\'authentification !')
